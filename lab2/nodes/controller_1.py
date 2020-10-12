@@ -1,4 +1,4 @@
-#! usr/bin/python
+#! /usr/bin/python
 
 # Importing the required libraries
 import math
@@ -7,6 +7,13 @@ import rospy
 
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
+
+# Initiating a publisher
+pub = rospy.Publisher(
+    name= '/perception',
+    data_class= Marker,
+    queue_size= 10
+)
 
 def polar_to_cartesian(r, theta):
     '''
@@ -21,8 +28,8 @@ def polar_to_cartesian(r, theta):
     '''
 
     #theta should be in radians and not degrees
-    x= r * math.cos(x= theta)
-    y= r * math.sin(x= theta) 
+    x= r * math.cos(theta)
+    y= r * math.sin(theta) 
 
     return (x, y)
 
@@ -64,7 +71,7 @@ def cal_error(line_param, point):
         err: float
     '''
 
-    (m, intercept) = line_param
+    (slope, intercept) = line_param
     (x, y) = point
 
     a = slope
@@ -87,42 +94,44 @@ def ransac(coordinates):
     Input:
         coordinates: dictionary
     '''
-    chosen_pair_list = list()
+    sampled_list = list()
+
+    max_inlier_count= 0
 
     for each_iter in range(100):
-        inlier_count = 0
-        best_line = list()
-        temp_dict = coordinates
-        chosen_pair = random.choice(range(1, len(coordinates)+1))
+        inlier_count= 0
 
-        if chosen_pair not in chosen_pair_list:
-            chosen_pair_list.append(chosen_pair)
+        temp_dict= coordinates.copy()
+        current_sample= random.sample(range(1, len(coordinates)+1), 2)
+        
+        if (current_sample not in sampled_list) and (current_sample.reverse not in sampled_list):
+            sampled_list.append(current_sample)
 
-            point_a = coordinates[chosen_pair[0]]
-            point_b = coordinates[chosen_pair[1]]
+            pt_1= coordinates[current_sample[0]]
+            pt_2= coordinates[current_sample[1]]
 
-            (m, c) = cal_line_eq(
-                point_1= point_a,
-                point_2= point_b
+            (m, c)= cal_line_eq(
+                point_1= pt_1, 
+                point_2= pt_2
             )
 
-            temp_dict.pop(chosen_pair[0])
-            temp_dict.pop(chosen_pair[1])
+            temp_dict.pop(current_sample[0])
+            temp_dict.pop(current_sample[1])
 
-            for key, each_point in temp_dict:
-                dist = cal_error(
+            for key, each_point in temp_dict.items():
+                error= cal_error(
                     line_param= (m, c),
                     point= (each_point)
                 )
-                
-                if dist > 0.25:
-                    inlier_count += 1
-                    best_line = [chosen_pair[0], chosen_pair[1]]
-                else:
-                    continue
 
-                break
-        break
+                if error < 0.05:
+                    inlier_count += 1
+        
+        if inlier_count > max_inlier_count:
+            max_inlier_count = inlier_count
+            best_sample = (coordinates[current_sample[0]], coordinates[current_sample[1]])
+
+    return best_sample
 
 def subscriber_callback(msg):
     '''
@@ -131,6 +140,7 @@ def subscriber_callback(msg):
     Input:
         msg -> LaserScan message
     '''
+    print('--------- NEW MESAGE -----------')
 
     # Angles from the return "msg" will always be in radians
     min_angle = msg.angle_min
@@ -147,7 +157,10 @@ def subscriber_callback(msg):
 
         i += 1
     
-    ransac(coordinates_dict)
+    classifier = ransac(coordinates_dict)
+
+    # Creating a message
+    pub_msg = Marker()
 
 if __name__ == '__main__':
     # Initiating a node
@@ -158,16 +171,6 @@ if __name__ == '__main__':
         name= '/base_scan',
         data_class= LaserScan,
         callback= subscriber_callback,
-        queue_size= 10
-    )
-
-    # Creating a message
-    pub_msg = Marker()
-
-    # Initiating a publisher
-    pub = rospy.Publisher(
-        name= '/perception',
-        data_class= Marker,
         queue_size= 10
     )
 
