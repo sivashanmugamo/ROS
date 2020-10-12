@@ -5,6 +5,7 @@ import math
 import random
 import rospy
 
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
 
@@ -140,27 +141,49 @@ def subscriber_callback(msg):
     Input:
         msg -> LaserScan message
     '''
-    print('--------- NEW MESAGE -----------')
+    scan_range = msg.ranges
 
-    # Angles from the return "msg" will always be in radians
-    min_angle = msg.angle_min
-    inc_angle = 0
+    flag = [0 if i==3.0 else 1 for i in scan_range]
 
-    coordinates_dict = dict()
+    if 1 in flag:
+        # Angles from the return "msg" will always be in radians
+        min_angle = msg.angle_min
+        inc_angle = 0
 
-    i = 1
-    for each_range in msg.ranges:
-        (x, y) = polar_to_cartesian(r= each_range, theta= (min_angle + inc_angle))
-        inc_angle += msg.angle_increment
+        coordinates_dict = dict()
 
-        coordinates_dict[i] = (x, y)
+        i = 1
+        for each_range in scan_range:
+            (x, y) = polar_to_cartesian(r= each_range, theta= (min_angle + inc_angle))
+            inc_angle += msg.angle_increment
 
-        i += 1
-    
-    classifier = ransac(coordinates_dict)
+            coordinates_dict[i] = (x, y)
 
-    # Creating a message
-    pub_msg = Marker()
+            i += 1
+        
+        classifier = ransac(coordinates_dict)
+
+        # Creating a message
+        pub_msg = Marker()
+
+        pub_msg.header.stamp = rospy.Time.now()
+        pub_msg.header.frame_id = '/base_link'
+        pub_msg.type = pub_msg.LINE_STRIP
+        pub_msg.action = pub_msg.ADD
+        pub_msg.lifetime = rospy.Duration(10)
+        pub_msg.scale.x = 0.2
+        pub_msg.scale.y = 0.2
+        pub_msg.color.a = 1.0
+        pub_msg.color.r = 1.0
+
+        pub_msg.points.append(Point(classifier[0][0], classifier[0][1], 0))
+        pub_msg.points.append(Point(classifier[1][0], classifier[1][1], 0))
+
+        pub.publish(pub_msg)
+
+    else:
+        pub_msg = Marker()
+        pub.publish(pub_msg)
 
 if __name__ == '__main__':
     # Initiating a node
