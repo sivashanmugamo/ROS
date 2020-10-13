@@ -54,10 +54,7 @@ def cal_line_eq(point_1, point_2):
         m = (y2 - y1)/(x2 - x1) # slope
         c = y2 - (m * x2) #intercept
     else:
-        print('-------------------------------------------------------------------')
-        print('The line is vertical, which means that the slope cannot be defined.')
-        print('Skip these points and proceed to others')
-        print('-------------------------------------------------------------------')
+        continue
 
     return (m, c)
 
@@ -93,7 +90,9 @@ def ransac(coordinates):
     Function to compute the RANSAC
 
     Input:
-        coordinates: dictionary
+        coordinates: Dictionary
+    Output:
+        best_sample: Tuple of point tuples
     '''
     sampled_list = list()
 
@@ -145,6 +144,7 @@ def subscriber_callback(msg):
 
     flag = [0 if i==3.0 else 1 for i in scan_range]
 
+    # If the LaserScan detecs something then best line is found using RANSAC
     if 1 in flag:
         # Angles from the return "msg" will always be in radians
         min_angle = msg.angle_min
@@ -166,6 +166,7 @@ def subscriber_callback(msg):
         # Creating a message
         pub_msg = Marker()
 
+        # Setting the message parameters
         pub_msg.header.stamp = rospy.Time.now()
         pub_msg.header.frame_id = '/base_link'
         pub_msg.type = pub_msg.LINE_STRIP
@@ -176,11 +177,12 @@ def subscriber_callback(msg):
         pub_msg.color.a = 1.0
         pub_msg.color.r = 1.0
 
-        pub_msg.points.append(Point(classifier[0][0], classifier[0][1], 0))
-        pub_msg.points.append(Point(classifier[1][0], classifier[1][1], 0))
+        for each_pt in classifier:
+            pub_msg.points.append(Point(each_pt[0], each_pt[1], 0))
 
         pub.publish(pub_msg)
 
+    # Else an empty message is published
     else:
         pub_msg = Marker()
         pub.publish(pub_msg)
