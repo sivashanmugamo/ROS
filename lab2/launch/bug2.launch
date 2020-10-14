@@ -1,0 +1,10 @@
+<launch>
+    <!-- Launches playground.world file -->
+    <node name= "stage" pkg= "stage_ros" type= "stageros" args= "$(find lab2)/world/playground.world" />
+
+    <!-- Launches controller_1.py script -->
+    <node name= "test_1" pkg= "lab2" type= "controller_1.py" output= "screen" />
+
+    <!-- Launches controller_2.py script -->
+    <node name= "test_2" pkg= "lab2" type= "controller_2.py" output= "screen" />
+</launch>

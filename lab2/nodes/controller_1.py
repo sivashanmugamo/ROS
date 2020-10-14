@@ -46,6 +46,9 @@ def cal_line_eq(point_1, point_2):
         c: float
     '''
 
+    m= None
+    c= None
+
     (x1, y1) = point_1
     (x2, y2) = point_2
 
@@ -53,8 +56,6 @@ def cal_line_eq(point_1, point_2):
         # y = mx + c
         m = (y2 - y1)/(x2 - x1) # slope
         c = y2 - (m * x2) #intercept
-    else:
-        continue
 
     return (m, c)
 
@@ -139,6 +140,8 @@ def subscriber_callback(msg):
 
     Input:
         msg -> LaserScan message
+    Output:
+        pub_msg -> Publishing Marker message
     '''
     scan_range = msg.ranges
 
@@ -163,7 +166,7 @@ def subscriber_callback(msg):
         
         classifier = ransac(coordinates_dict)
 
-        # Creating a message
+        # Creating a message for rviz
         pub_msg = Marker()
 
         # Setting the message parameters
