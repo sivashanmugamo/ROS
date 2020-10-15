@@ -9,6 +9,9 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
 from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
+print(1)
+init_position = (-8.0, -2.0)
+goal_position = (4.5, 9.0)
 
 # Initializing a publisher
 pub = rospy.Publisher(
@@ -17,47 +20,29 @@ pub = rospy.Publisher(
     queue_size= 10
 )
 
-'''
-def subscriber_callback(msg):
-    '''
-    Callback function for the subscriber
+def sync_callback(laser_msg, odom_msg):
+    print(6)
+    global slope, intercept
+    bot_position = (odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y)
 
-    Input:
-        msg -> LaserScan message
-    '''
-    # Creating a message for robot's mobility
-    # pub_msg = Twist()
-    print('laser '+str(datetime.datetime.time()))
-
-def sub_callback(tst):
-    print('odom '+str(datetime.datetime.time()))
-'''
-
-def callback(laser_msg, odom_msg):
-    print(type(laser_msg))
-    print(type(odom_msg))
+    print(7)
+    if bot_position == init_position:
+        (slope, intercept) = cal_line_eq(
+            point_1= init_position,
+            point_2= goal_position
+        )
 
 if __name__ == '__main__':
-    # Initiatin a node
+    print(2)
     rospy.init_node('test_node_2')
 
-    # Initiating a subscriber
-    laser_sub = rospy.Subscriber(
-        name= '/base_scan',
-        data_class= LaserScan
-        # callback= subscriber_callback
-    )
+    print(3)
+    laser_sub = message_filters.Subscriber('/base_scan', LaserScan)
+    odom_sub = message_filters.Subscriber('/odom', Odometry)
 
-    odom_sub = rospy.Subscriber(
-        name= '/odom',
-        data_class= Odometry
-        # callback= sub_callback
-    )
+    print(4)
+    tst = message_filters.ApproximateTimeSynchronizer([laser_sub, odom_sub], 10, 0.2, True)
+    tst.registerCallback(sync_callback)
 
-    tst = message_filters.TimeSynchronizer(
-        fs= [laser_sub, odom_sub],
-        queue_size= 10
-    )
-
-    # Runs the session infinitely
+    print(5)
     rospy.spin()
