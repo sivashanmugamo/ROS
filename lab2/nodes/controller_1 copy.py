@@ -95,64 +95,44 @@ def ransac(coordinates):
     Output:
         best_sample: Tuple of point tuples
     '''
-    # sampled_list = list()
+    sampled_list = list()
 
-    # max_inlier_count= 0
+    max_inlier_count= 0
 
-    # for each_iter in range(100):
-    #     inlier_count= 0
+    for each_iter in range(100):
+        inlier_count= 0
 
-    #     temp_dict= coordinates.copy()
-    #     current_sample= random.sample(range(1, len(coordinates)+1), 2)
+        temp_dict= coordinates.copy()
+        current_sample= random.sample(range(1, len(coordinates)+1), 2)
         
-    #     if (current_sample not in sampled_list) and (current_sample.reverse not in sampled_list):
-    #         sampled_list.append(current_sample)
+        if (current_sample not in sampled_list) and (current_sample.reverse not in sampled_list):
+            sampled_list.append(current_sample)
 
-    #         pt_1= coordinates[current_sample[0]]
-    #         pt_2= coordinates[current_sample[1]]
+            pt_1= coordinates[current_sample[0]]
+            pt_2= coordinates[current_sample[1]]
 
-    #         (m, c)= cal_line_eq(
-    #             point_1= pt_1, 
-    #             point_2= pt_2
-    #         )
+            (m, c)= cal_line_eq(
+                point_1= pt_1, 
+                point_2= pt_2
+            )
 
-    #         temp_dict.pop(current_sample[0])
-    #         temp_dict.pop(current_sample[1])
+            temp_dict.pop(current_sample[0])
+            temp_dict.pop(current_sample[1])
 
-    #         for key, each_point in temp_dict.items():
-    #             error= cal_error(
-    #                 line_param= (m, c),
-    #                 point= (each_point)
-    #             )
+            for key, each_point in temp_dict.items():
+                error= cal_error(
+                    line_param= (m, c),
+                    point= (each_point)
+                )
 
-    #             if error < 0.05:
-    #                 inlier_count += 1
+                if error < 0.05:
+                    inlier_count += 1
         
-    #     if inlier_count > max_inlier_count:
-    #         max_inlier_count = inlier_count
-    #         best_sample = (coordinates[current_sample[0]], coordinates[current_sample[1]])
+        if inlier_count > max_inlier_count:
+            max_inlier_count = inlier_count
+            best_sample = (coordinates[current_sample[0]], coordinates[current_sample[1]])
 
-    # return best_sample
-
-    best_lines= list()
-
-    temp_coordinates= coordinates.copy()
-
-    while len(temp_coordinates > 30):
-        sampled_list= list()
-
-        max_inlier_count= 0
-
-        for each_iter in range(100):
-            inlier_count= 0
-
-            temp_dict= coordinates.copy()
-            current_sample= random.sample(range(1, len(coordinates)+1), 2)
-
-            if (current_sample not in sampled_list) and (sampled_list.reverse not in sampled_list):
-                sampled_list.append()
-
-                
+    return best_sample
 
 def subscriber_callback(msg):
     '''
@@ -184,31 +164,31 @@ def subscriber_callback(msg):
 
             i += 1
         
-        classifiers = ransac(coordinates_dict)
+        classifier = ransac(coordinates_dict)
 
-        # # Creating a message for rviz
-        # pub_msg = Marker()
+        # Creating a message for rviz
+        pub_msg = Marker()
 
-        # # Setting the message parameters
-        # pub_msg.header.stamp = rospy.Time.now()
-        # pub_msg.header.frame_id = '/base_link'
-        # pub_msg.type = pub_msg.LINE_STRIP
-        # pub_msg.action = pub_msg.ADD
-        # pub_msg.lifetime = rospy.Duration(10)
-        # pub_msg.scale.x = 0.2
-        # pub_msg.scale.y = 0.2
-        # pub_msg.color.a = 1.0
-        # pub_msg.color.r = 1.0
+        # Setting the message parameters
+        pub_msg.header.stamp = rospy.Time.now()
+        pub_msg.header.frame_id = '/base_link'
+        pub_msg.type = pub_msg.LINE_STRIP
+        pub_msg.action = pub_msg.ADD
+        pub_msg.lifetime = rospy.Duration(10)
+        pub_msg.scale.x = 0.2
+        pub_msg.scale.y = 0.2
+        pub_msg.color.a = 1.0
+        pub_msg.color.r = 1.0
 
-        # for each_pt in classifier:
-        #     pub_msg.points.append(Point(each_pt[0], each_pt[1], 0))
+        for each_pt in classifier:
+            pub_msg.points.append(Point(each_pt[0], each_pt[1], 0))
 
-        # pub.publish(pub_msg)
+        pub.publish(pub_msg)
 
     # Else an empty message is published
-    # else:
-    #     pub_msg = Marker()
-    #     pub.publish(pub_msg)
+    else:
+        pub_msg = Marker()
+        pub.publish(pub_msg)
 
 if __name__ == '__main__':
     # Initiating a node
