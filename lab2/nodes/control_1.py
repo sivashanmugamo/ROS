@@ -87,6 +87,15 @@ def cal_error(line_param, point):
     return err
 
 def ransac(coordinates):
+    '''
+    Function to compute the RANSAC
+
+    Input:
+        coordinates: Dictionary
+    Output:
+        best_lines: List of tuples of tuples - Eg: [((x1, y1), (x2, y2))]
+    '''
+    
     best_lines= list()
 
     while len(coordinates) > 30:
@@ -145,8 +154,6 @@ def subscriber_callback(msg):
     Output:
         pub_msg -> Publishing Marker message
     '''
-
-    print('----------- NEW MESSAGE ------------')
     
     coordinates_dict= dict()
 
@@ -156,10 +163,9 @@ def subscriber_callback(msg):
     i= 0
     for each_range in msg.ranges:
         if each_range != 3.0:
-            print(i * min_angle)
             coordinates_dict[i+1] = polar_to_cartesian(
                 r= each_range,
-                theta= (i * inc_angle)
+                theta= (min_angle + (i * inc_angle))
             )
         i += 1
     
@@ -167,28 +173,25 @@ def subscriber_callback(msg):
         coordinates= coordinates_dict
     )
 
-    print(classifiers)
+    # Creating a message for rviz
+    pub_msg = Marker()
 
-    # # Creating a message for rviz
-    # pub_msg = Marker()
+    # Setting the message parameters
+    pub_msg.header.stamp = rospy.Time.now()
+    pub_msg.header.frame_id = '/base_link'
+    pub_msg.type = pub_msg.LINE_LIST
+    pub_msg.action = pub_msg.ADD
+    pub_msg.lifetime = rospy.Duration(10)
+    pub_msg.scale.x = 0.2
+    pub_msg.scale.y = 0.2
+    pub_msg.color.a = 1.0
+    pub_msg.color.r = 1.0
 
-    # # Setting the message parameters
-    # pub_msg.header.stamp = rospy.Time.now()
-    # pub_msg.header.frame_id = '/base_link'
-    # pub_msg.type = pub_msg.LINE_LIST
-    # pub_msg.action = pub_msg.ADD
-    # pub_msg.lifetime = rospy.Duration(10)
-    # pub_msg.scale.x = 0.2
-    # pub_msg.scale.y = 0.2
-    # pub_msg.color.a = 1.0
-    # pub_msg.color.r = 1.0
+    for each_classifier in classifiers:
+        pub_msg.points.append(Point(each_classifier[0][0], each_classifier[0][1], 0))
+        pub_msg.points.append(Point(each_classifier[1][0], each_classifier[1][1], 0))
 
-    # for each_classifier in classifiers:
-    #     # print(each_classifier)
-    #     pub_msg.points.append(Point(each_classifier[0][0], each_classifier[0][1], 0))
-    #     pub_msg.points.append(Point(each_classifier[1][0], each_classifier[1][1], 0))
-
-    # pub.publish(pub_msg)
+    pub.publish(pub_msg)
 
 if __name__ == '__main__':
     # Initiating a node
