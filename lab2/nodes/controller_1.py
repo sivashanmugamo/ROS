@@ -184,7 +184,6 @@ def ransac(coordinates):
 
         best_lines.append(best_sample)
 
-    # print(len(best_lines))
     return best_lines
 
 def subscriber_callback(msg):
@@ -211,6 +210,7 @@ def subscriber_callback(msg):
 
         i= 1
         for each_range in scan_range:
+            # if (each_range != 3.0):
             (x, y)= polar_to_cartesian(r= each_range, theta= (min_angle + inc_angle))
             inc_angle += msg.angle_increment
 
