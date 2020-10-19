@@ -197,6 +197,7 @@ def subscriber_callback(msg):
     '''
 
     scan_range= msg.ranges
+    # scan_range= [i for i in msg.ranges if i!=3.0]
 
     flag= [0 if i==3.0 else 1 for i in scan_range]
 
