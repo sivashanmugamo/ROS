@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 # Importing the required libraries
+import tf
 import math
 import rospy
 import message_filters
@@ -16,8 +17,8 @@ from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
 bot_status = 'GOALSEEK'
 
 # Inititalizing the initial & goal positions
-init_position = (-8.0, -2.0, 0.0)
-goal_position = (4.5, 9.0, 0.0)
+init_position = (-8.0, -2.0)
+goal_position = (4.5, 9.0)
 
 # Calculating the line connecting the initial & goal positions
 goal_line_param = cal_line_eq(
@@ -63,15 +64,20 @@ def sync_callback(scan_msg, odom_msg):
 
     pose_msg = odom_msg.pose.pose
     bot_position = (pose_msg.position.x, pose_msg.position.y, pose_msg.position.z)
+    bot_orientation = (pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z, pose_msg.orientation.w)
 
     pub_msg = Twist()
 
-    if bot_position != goal_position:
-        if bot_status == 'GOALSEEK':
-            dist_to_goal = cal_pt_dist(
-                point_1= bot_position,
-                point_2= goal_position
-            )
+    (a, b, c) = tf.transformations.euler_from_quaternion(quaternion= bot_orientation)
+
+    print(a, b, c)
+
+    # if bot_position != goal_position:
+    #     if bot_status == 'GOALSEEK':
+    #         dist_to_goal = cal_pt_dist(
+    #             point_1= bot_position,
+    #             point_2= goal_position
+    #         )
 
 if __name__ == '__main__':
     # Initiating a node
