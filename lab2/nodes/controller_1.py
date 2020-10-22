@@ -164,7 +164,7 @@ def subscriber_callback(msg):
     i= 0
     for each_range in msg.ranges:
         if each_range != 3.0:
-            coordinates_dict[i+1] = polar_to_cartesian(
+            coordinates_dict[i+1]= polar_to_cartesian(
                 r= each_range,
                 theta= (min_angle + (i * inc_angle))
             )

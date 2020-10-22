@@ -9,7 +9,7 @@ import message_filters
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, Vector3
 from tf.transformations import euler_from_quaternion
 
 from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
@@ -30,6 +30,12 @@ pub= rospy.Publisher(
 
 # Creating a message object
 pub_msg= Twist()
+
+marker_pub= rospy.Publisher(
+    name= '/perception',
+    data_class= Marker,
+    queue_size= 10
+)
 
 # Calculating the transit path
 goal_line_param= cal_line_eq(
@@ -64,7 +70,6 @@ def bot_orient(bot_angle, goal_angle):
         rot_msg.angular.z= abs(bot_angle - goal_angle)
         pub.publish(rot_msg)
 
-
 def fw_possible(detect_data):
     flag= [1 if i > 1.0 else 0 for i in detect_data[72: 288]]
 
@@ -72,10 +77,6 @@ def fw_possible(detect_data):
         return False
     else:
         return True
-
-def bot_parallel(detect_data):
-    # print('Check if parallel')
-    print(len(detect_data))
 
 def bot_move(detect_data):
     global bot_status
@@ -85,16 +86,35 @@ def bot_move(detect_data):
     mov_msg = Twist()
     
     if fw_possible(scan_data):
-        print('But robot can move')
-        mov_msg.linear.x= 0.5
+        mov_msg.linear.x= 2.0
         pub.publish(mov_msg)
     else:
-        print('Robot can\'t move')
         bot_status= 'WALLFOLLOW'
-        bot_parallel(scan_data)
+
+def bot_parallel(scan, odom, bot_angle):
+    # print(goal_line_param)
+    pll_msg= Twist()
+
+    min_angle= scan.angle_min
+    inc_angle= scan.angle_increment
+
+    coordinates_dict= dict()
+
+    i= 0
+    for each_range in scan.ranges:
+        if each_range != 3.0:
+            coordinates_dict[i+1]= polar_to_cartesian(
+                r= each_range,
+                theta= (min_angle + (i * inc_angle))
+            )
+        i+=1
+
+    classifiers= ransac(
+        coordinates= coordinates_dict
+    )
 
 def sync_callback(scan_msg, odom_msg):
-    print('------ NEW MESSAGE ------'+bot_status)
+    print('------ NEW MESSAGE ------ '+bot_status)
 
     bot_odom= odom_msg.pose.pose
     current_position= (bot_odom.position.x, bot_odom.position.y, bot_odom.position.z)
@@ -111,19 +131,19 @@ def sync_callback(scan_msg, odom_msg):
     if bot_init != bot_goal:
         if bot_status == 'GOALSEEK':
             if ((yaw+0.01 > angle) and (angle > yaw-0.01)) == False:
-                print('Turn')
                 bot_orient(
                     bot_angle= yaw, 
                     goal_angle= angle
                 )
             else:
-                print('Don\'t turn')
                 bot_move(
                     detect_data= scan_msg
                 )
         elif bot_status == 'WALLFOLLOW':
-            bot_move(
-                detect_data= scan_msg
+            bot_parallel(
+                scan= scan_msg,
+                odom= odom_msg, 
+                bot_angle= yaw
             )
         else:
             raise Exception('Invalid bot status received')
