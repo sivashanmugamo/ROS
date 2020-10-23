@@ -15,6 +15,7 @@ from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
 
 # Initializing the robot's status
 bot_status= 'GOALSEEK'
+first_contact= 0
 
 # z= 0.0 by default as the robot is in ground level
 bot_init= (-8.0, -2.0, 0.0)
@@ -77,42 +78,48 @@ def left_wall_detect(scan_data):
     #     'left': scan_range[288:]
     # }
 
-    print('Inside left wall')
     scan_parts= {
-        'right': min(min(scan_range[:72]), 5), 
-        'fright': min(min(scan_range[72:144]), 5),
-        'front': min(min(scan_range[144:216]), 5), 
-        'fleft': min(min(scan_range[216:288]), 5), 
-        'left': min(min(scan_range[288:]), 5)
+        'right': [i for i in scan_range[]]
     }
 
-    d= 1
-    print(scan_parts)
+    return scan_parts
 
-    if scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
-        print('Nope')
-    elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
-        print('Front')
-        return 1
-    elif scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
-        print('fright')
-        return 2
-    elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
-        print('fleft')
-    elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
-        print('front & fright')
-        return 1
-    elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
-        print('front & fleft')
-        return 1
-    elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
-        print('front & fleft & fright')
-        return 1
-    elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
-        print('fleft & fright')
+    # print('Inside left wall')
+    # scan_parts= {
+    #     'right': min(min(scan_range[:72]), 5), 
+    #     'fright': min(min(scan_range[72:144]), 5),
+    #     'front': min(min(scan_range[144:216]), 5), 
+    #     'fleft': min(min(scan_range[216:288]), 5), 
+    #     'left': min(min(scan_range[288:]), 5)
+    # }
+
+    # d= 1
+    # print(scan_parts)
+
+    # if scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+    #     print('Nope')
+    # elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+    #     print('Front')
+    #     return 1
+    # elif scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+    #     print('fright')
+    #     return 2
+    # elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+    #     print('fleft')
+    # elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+    #     print('front & fright')
+    #     return 1
+    # elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+    #     print('front & fleft')
+    #     return 1
+    # elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+    #     print('front & fleft & fright')
+    #     return 1
+    # elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+    #     print('fleft & fright')
 
 def bot_movement(scan_data, odom_data):
-    global bot_status, goal_line
+    global bot_status, first_contact, goal_line
 
     odom_msg= odom_data
     bot_pos= (odom_msg.position.x, odom_msg.position.y, odom_msg.position.z)
@@ -142,19 +149,26 @@ def bot_movement(scan_data, odom_data):
             print('Obstacle detected & status change to WALLFOLLOW')
             mov_msg.linear.x= 0.0
             cmd_pub.publish(mov_msg)
-            bot_status = 'WALLFOLLOW'
+            bot_status= 'WALLFOLLOW'
     elif bot_status == 'WALLFOLLOW':
-        print('Following wall')
-        temp= left_wall_detect(scan_data= scan_data)
+        wall_detection= left_wall_detect(scan_data= scan_data)
+        if fw_movement(scan_data= scan_data) or wall_detection['front']:
+            mov_msg.angular.z= -1.5
+            cmd_pub.publish(mov_msg)
+        else:
+            mov_msg.linear.x= 1.0
+            cmd_pub.publish(mov_msg)
 
-        if temp == 0:
-            a = 0
-        elif temp == 1:
-            mov_msg.angular.z= -0.3
-            cmd_pub.publish(mov_msg)
-        elif temp == 2:
-            mov_msg.linear.x= 0.5
-            cmd_pub.publish(mov_msg)
+        # temp= left_wall_detect(scan_data= scan_data)
+
+        # if temp == 0:
+        #     a = 0
+        # elif temp == 1:
+        #     mov_msg.angular.z= -0.3
+        #     cmd_pub.publish(mov_msg)
+        # elif temp == 2:
+        #     mov_msg.linear.x= 0.5
+        #     cmd_pub.publish(mov_msg)
 
 def sync_callback(scan_msg, odom_msg):
     print('-------------------- '+bot_status+' --------------------')
