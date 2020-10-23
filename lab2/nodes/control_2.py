@@ -71,46 +71,100 @@ def bot_orient(bot_angle, goal_angle):
         pub.publish(rot_msg)
 
 def fw_possible(detect_data):
-    flag= [1 if i > 1.0 else 0 for i in detect_data[72: 288]]
+    flag= [1 if i > 2.0 else 0 for i in detect_data[155: 205]]
 
     if 0 in flag:
         return False
     else:
         return True
 
-def bot_move(detect_data):
-    global bot_status
-    scan_data= detect_data.ranges
+def wall_check(detect_data):
+    left_wall= [i for i in detect_data[(4*len(detect_data))/5:] if i < 3.0]
+    right_wall= [i for i in detect_data[:(len(detect_data))/5] if i < 3.0]
+
+    if len(left_wall) != 0:
+        print('Wall on left')
+        return ('left', len(left_wall), len(detect_data[4*(len(detect_data))/5:]))
+    elif len(right_wall) != 0:
+        print('Wall on right')
+        return ('right', len(right_wall), len(detect_data[:(len(detect_data))/5]))
+    else:
+        return ('none', 0, 0)
+
+def bot_move(scan_data, odom_data):
+    global bot_status, bot_goal
+    scan_data= scan_data.ranges
     flag= [1 if i == 3.0 else 0 for i in scan_data]
 
     mov_msg = Twist()
+
+    bot_position= odom_data.pose.pose.position
+    bot_orientation= odom_data.pose.pose.orientation
+
+    (r, p, y)= euler_from_quaternion((bot_orientation.x, bot_orientation.y, bot_orientation.z, bot_orientation.w))
     
-    if fw_possible(scan_data):
-        mov_msg.linear.x= 2.0
-        pub.publish(mov_msg)
+    if bot_status != 'WALLFOLLOW':
+        if fw_possible(scan_data):
+            mov_msg.linear.x= 2.0
+            pub.publish(mov_msg)
+        else:
+            bot_status= 'WALLFOLLOW'
     else:
-        bot_status= 'WALLFOLLOW'
+        if fw_possible(scan_data):
+            print('Moving')
+            mov_msg.linear.x= 0.5
+            pub.publish(mov_msg)
+            (side, coverage, actual)= wall_check(scan_data)
+            if (side == 'left') and (coverage != actual):
+                print('Turning left')
+                bot_orient(
+                    bot_angle= y, 
+                    goal_angle= cal_goal_angle(point_1= (bot_position.x, bot_position.y, bot_position.z), point_2= bot_goal)
+                    # goal_angle= y + math.radians(-30)
+                )
+            elif (side == 'right') and (coverage != actual):
+                print('Turning right')
+                bot_orient(
+                    bot_angle= y,
+                    goal_angle= cal_goal_angle(point_1= (bot_position.x, bot_position.y, bot_position.z), point_2= bot_goal)
+                )
+            else:
+                mov_msg.linear.x= 0
+            pub.publish(mov_msg)
+        else:
+            print('Can\'t move')
+            mov_msg.angular.z= -1.0
+            pub.publish(mov_msg)
 
-def bot_parallel(scan, odom, bot_angle):
-    # print(goal_line_param)
-    pll_msg= Twist()
+def bot_parallel(scan_data, odom_data, bot_angle):
+    # pll_msg= Twist()
 
-    min_angle= scan.angle_min
-    inc_angle= scan.angle_increment
+    # min_angle= scan.angle_min
+    # inc_angle= scan.angle_increment
 
-    coordinates_dict= dict()
+    # coordinates_dict= dict()
 
-    i= 0
-    for each_range in scan.ranges:
-        if each_range != 3.0:
-            coordinates_dict[i+1]= polar_to_cartesian(
-                r= each_range,
-                theta= (min_angle + (i * inc_angle))
-            )
-        i+=1
+    # i= 0
+    # for each_range in scan.ranges:
+    #     if each_range != 3.0:
+    #         coordinates_dict[i+1]= polar_to_cartesian(
+    #             r= each_range,
+    #             theta= (min_angle + (i * inc_angle))
+    #         )
+    #     i+=1
 
-    classifiers= ransac(
-        coordinates= coordinates_dict
+    # classifiers= ransac(
+    #     coordinates= coordinates_dict
+    # )
+
+    bot_orient(
+        bot_angle= bot_angle,
+        goal_angle= (-1)*goal_line_param[0]
+    )
+    
+    bot_move(
+        scan_data= scan_data, 
+        odom_data= odom_data
     )
 
 def sync_callback(scan_msg, odom_msg):
@@ -137,12 +191,13 @@ def sync_callback(scan_msg, odom_msg):
                 )
             else:
                 bot_move(
-                    detect_data= scan_msg
+                    scan_data= scan_msg,
+                    odom_data= odom_msg
                 )
         elif bot_status == 'WALLFOLLOW':
             bot_parallel(
-                scan= scan_msg,
-                odom= odom_msg, 
+                scan_data= scan_msg,
+                odom_data= odom_msg, 
                 bot_angle= yaw
             )
         else:

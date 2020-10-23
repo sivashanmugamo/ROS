@@ -1,96 +1,93 @@
 #! /usr/bin/python
 
-# Importing the required libraries
-import tf
+#Importing the required libraries
 import math
 import rospy
 import message_filters
+import tf.transformations as tr
 
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
 
-from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
+from controller_1 import cal_line_eq, cal_error, ransac
 
-# Initializing the initial operating status of the robot
-bot_status = 'GOALSEEK'
+bot_status= 'GOALSEEK'
 
-# Inititalizing the initial & goal positions
-init_position = (-8.0, -2.0)
-goal_position = (4.5, 9.0)
+bot_init= (-8.0, -2.0, 0.0)
+bot_goal= (4.5, 9.0, 0.0)
 
-# Calculating the line connecting the initial & goal positions
-goal_line_param = cal_line_eq(
-    point_1= init_position,
-    point_2= goal_position
+goal_line= cal_line_eq(
+    point_1= bot_init[:2], 
+    point_2= bot_goal[:2]
 )
 
-# Initiating a publisher
-pub = rospy.Publisher(
-    name= '/cmd_vel',
-    data_class= Twist,
+cmd_pub= rospy.Publisher(
+    name= '/cmd_vel', 
+    data_class= Twist, 
     queue_size= 10
 )
 
-def cal_pt_dist(point_1, point_2):
-    '''
-    Calculates the distance between given 2 points
+def cal_angle(pt_1, pt_2):
+    (x1, y1, z1)= pt_1
+    (x2, y2, z2)= pt_2
 
-    Input:
-        point_1: Tuple of float values
-        point_2: Tuple of float values
-    Output:
-        dist: Float
-    '''
+    return math.atan2((y2-y1), (x2-x1))
 
-    (x1, y1) = point_1
-    (x2, y2) = point_2
+def bot_orient(initial, goal):
+    rot_msg= Twist()
 
-    dist = math.sqrt(math.pow((x2-x1), 2) + math.pow((y2-y1), 2))
+    if (initial - goal) > 0:
+        rot_msg.angular.z= (-1)*(initial - goal)
+        cmd_pub.publish(rot_msg)
+    else:
+        rot_msg.angular.z= abs(initial - goal)
+        cmd_pub.publish(rot_msg)
 
-    return dist
+def bot_movement(scan_data, odom_data):
+    odom_msg= odom_data
+    bot_pos= (odom_msg.position.x, odom_msg.position.y, odom_msg.position.z)
+    bot_ori= (odom_msg.orientation.x, odom_msg.orientation.y, odom_msg.orientation.z, odom_msg.orientation.w)
+
+    (roll, pitch, yaw)= tr.euler_from_quaternion(bot_ori)
+
+    goal_angle= cal_angle(
+        pt_1= bot_init, 
+        pt_2= bot_goal
+    )
+
+    if bot_pos[1] == (goal_line[0] * bot_pos[0]) + goal_line[1]:
+        print('On goal line')
+        bot_orient(
+            initial= yaw,
+            goal= goal_angle
+        )
+    else:
+        print('Not on goal line')
 
 def sync_callback(scan_msg, odom_msg):
-    '''
-    Callback function for the subscribers
+    print('-------------------- '+bot_status+' --------------------')
 
-    Input:
-        scan_msg: LaserScan message
-        odom_msg: Odometry message
-    Output:
-        *Still in the works*
-    '''
+    odom_msg= odom_msg.pose.pose
+    bot_pos= (odom_msg.position.x, odom_msg.position.y, odom_msg.position.z)
 
-    pose_msg = odom_msg.pose.pose
-    bot_position = (pose_msg.position.x, pose_msg.position.y, pose_msg.position.z)
-    bot_orientation = (pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z, pose_msg.orientation.w)
-
-    pub_msg = Twist()
-
-    (a, b, c) = tf.transformations.euler_from_quaternion(quaternion= bot_orientation)
-
-    print(a, b, c)
-
-    # if bot_position != goal_position:
-    #     if bot_status == 'GOALSEEK':
-    #         dist_to_goal = cal_pt_dist(
-    #             point_1= bot_position,
-    #             point_2= goal_position
-    #         )
+    if bot_pos == bot_goal:
+        print('Bot in goal')
+    else:
+        print('Bot not in goal')
+        bot_movement(
+            scan_data= scan_msg, 
+            odom_data= odom_msg
+        )
 
 if __name__ == '__main__':
-    # Initiating a node
     rospy.init_node('test_node_2')
 
-    # Initiating a subscriber for /base_scan
-    scan_sub = message_filters.Subscriber('/base_scan', LaserScan)
-    # Initiating a subscriber for /odom
-    odom_sub = message_filters.Subscriber('/odom', Odometry)
+    scan_sub= message_filters.Subscriber('/base_scan', LaserScan)
+    odom_sub= message_filters.Subscriber('/odom', Odometry)
 
-    # To synchronize the messages from the 2 subscriber
-    tst = message_filters.ApproximateTimeSynchronizer([scan_sub, odom_sub], 10, 0.2, True)
-    tst.registerCallback(sync_callback)
+    sync= message_filters.ApproximateTimeSynchronizer([scan_sub, odom_sub], 10, 0.1, True)
+    sync.registerCallback(sync_callback)
 
-    # Runs the session infinitely
     rospy.spin()
