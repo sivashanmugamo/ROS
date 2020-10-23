@@ -11,7 +11,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
 
-from controller_1 import cal_line_eq, cal_error, ransac
+from controller_1 import polar_to_cartesian, cal_line_eq, cal_error, ransac
 
 # Initializing the robot's status
 bot_status= 'GOALSEEK'
@@ -43,7 +43,7 @@ def cal_angle(pt_1, pt_2):
     Output:
         angle: Float
     '''
-    
+
     (x1, y1, z1)= pt_1
     (x2, y2, z2)= pt_2
 
@@ -69,13 +69,47 @@ def fw_movement(scan_data):
 
 def left_wall_detect(scan_data):
     scan_range= scan_data.ranges
+    # scan_parts= {
+    #     'right': scan_range[:72], 
+    #     'fright': scan_range[72:144],
+    #     'front': scan_range[144:216], 
+    #     'fleft': scan_range[216:288], 
+    #     'left': scan_range[288:]
+    # }
+
+    print('Inside left wall')
     scan_parts= {
-        'right': scan_range[:72], 
-        'fright': scan_range[72:144],
-        'front': scan_range[144:216], 
-        'fleft': scan_range[216:288], 
-        'left': scan_range[288:]
+        'right': min(min(scan_range[:72]), 5), 
+        'fright': min(min(scan_range[72:144]), 5),
+        'front': min(min(scan_range[144:216]), 5), 
+        'fleft': min(min(scan_range[216:288]), 5), 
+        'left': min(min(scan_range[288:]), 5)
     }
+
+    d= 1
+    print(scan_parts)
+
+    if scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+        print('Nope')
+    elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+        print('Front')
+        return 1
+    elif scan_parts['front'] > d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+        print('fright')
+        return 2
+    elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+        print('fleft')
+    elif scan_parts['front'] < d and scan_parts['fleft'] > d and scan_parts['fright'] > d:
+        print('front & fright')
+        return 1
+    elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+        print('front & fleft')
+        return 1
+    elif scan_parts['front'] < d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+        print('front & fleft & fright')
+        return 1
+    elif scan_parts['front'] > d and scan_parts['fleft'] < d and scan_parts['fright'] > d:
+        print('fleft & fright')
 
 def bot_movement(scan_data, odom_data):
     global bot_status, goal_line
@@ -111,7 +145,16 @@ def bot_movement(scan_data, odom_data):
             bot_status = 'WALLFOLLOW'
     elif bot_status == 'WALLFOLLOW':
         print('Following wall')
-        print(yaw)
+        temp= left_wall_detect(scan_data= scan_data)
+
+        if temp == 0:
+            a = 0
+        elif temp == 1:
+            mov_msg.angular.z= -0.3
+            cmd_pub.publish(mov_msg)
+        elif temp == 2:
+            mov_msg.linear.x= 0.5
+            cmd_pub.publish(mov_msg)
 
 def sync_callback(scan_msg, odom_msg):
     print('-------------------- '+bot_status+' --------------------')
