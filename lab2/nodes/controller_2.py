@@ -35,6 +35,16 @@ cmd_pub= rospy.Publisher(
 )
 
 def cal_dist(pt_1, pt_2):
+    '''
+    Calculates the distance between the given 2 points
+
+    Input:
+        pt_1: Tuple of x, y, & z
+        pt_2: Tuple of x, y, & z
+    Output:
+        distance: Float
+    '''
+
     (x1, y1, z1)= pt_1
     (x2, y2, z2)= pt_2
 
@@ -57,6 +67,13 @@ def cal_angle(pt_1, pt_2):
     return math.atan2((y2-y1), (x2-x1))
 
 def bot_orient(initial, goal):
+    '''
+    Rotated the bot by the degree of the difference between the goal & initial angle
+
+    Input:
+        initial: Angle in radians
+        goal: Angle in radians
+    '''
     rot_msg= Twist()
 
     if (initial - goal) > 0:
@@ -67,10 +84,19 @@ def bot_orient(initial, goal):
         cmd_pub.publish(rot_msg)
 
 def fw_movement(scan_data):
+    '''
+    Checks if there is an obstacle in front of the robot
+
+    Input:
+        scan_data: LaserScan message
+    Output:
+        True/False
+    '''
+
     global goal_distance
 
     if goal_distance > 2.5:
-        flag= [0 if i < 1.5 else 1 for i in scan_data.ranges[140:250]]#[72: 288]]
+        flag= [0 if i < 1.5 else 1 for i in scan_data.ranges[140:250]]
         if 1 in flag:
             return False
         else:
@@ -78,13 +104,19 @@ def fw_movement(scan_data):
     else:
         flag= [1 if i > 2.5
          else 0 for i in scan_data.ranges[165:195]]
-        # if scan_data.ranges[180] < 3.0:
         if 1 in flag:
             return True
         else:
             return False
 
 def left_wall_detect(scan_data):
+    '''
+    Partition the LaserScan range for wall detection
+
+    Input:
+        scan_data: LaserScan message
+    '''
+
     scan_range= scan_data.ranges
 
     scan_parts= {
@@ -98,6 +130,14 @@ def left_wall_detect(scan_data):
     return scan_parts
 
 def bot_movement(scan_data, odom_data):
+    '''
+    Moves the robot based on the conditions & detections
+
+    Input:
+        scan_data: LaserScan message
+        odom_data: Odometry message
+    '''
+
     global bot_status, first_contact, goal_line
 
     odom_msg= odom_data
@@ -143,8 +183,8 @@ def bot_movement(scan_data, odom_data):
                 pass
         elif len(wall_detection['front']) == 0 and (len(wall_detection['left']) < 70) :
             print('Turn a bit')
-            mov_msg.linear.x= 1 #0.5
-            mov_msg.angular.z= 0.75 #0.5
+            mov_msg.linear.x= 1
+            mov_msg.angular.z= 0.75
             first_contact= True
             cmd_pub.publish(mov_msg)
         else:
@@ -159,6 +199,14 @@ def bot_movement(scan_data, odom_data):
                 bot_status= 'GOALSEEK'
 
 def sync_callback(scan_msg, odom_msg):
+    '''
+    Callback function for the subscribers
+
+    Input:
+        scan_msg: LaserScan message
+        odom_msg: Odometry message
+    '''
+
     global first_contact, goal_distance, bot_status
 
     print('-------------------- '+bot_status+' --------------------')
