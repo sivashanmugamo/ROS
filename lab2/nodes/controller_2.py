@@ -34,6 +34,12 @@ cmd_pub= rospy.Publisher(
     queue_size= 10
 )
 
+def cal_dist(pt_1, pt_2):
+    (x1, y1, z1)= pt_1
+    (x2, y2, z2)= pt_2
+
+    return math.sqrt(math.pow((y2-y1), 2)+math.pow((x2-x1), 2))
+
 def cal_angle(pt_1, pt_2):
     '''
     Calculates the angle to the goal point with respect to x-axis
@@ -61,12 +67,22 @@ def bot_orient(initial, goal):
         cmd_pub.publish(rot_msg)
 
 def fw_movement(scan_data):
-    flag= [0 if i < 1.5 else 1 for i in scan_data.ranges[140:250]]#[72: 288]]
+    global goal_distance
 
-    if 1 in flag:
-        return False
+    if goal_distance > 2.5:
+        flag= [0 if i < 1.5 else 1 for i in scan_data.ranges[140:250]]#[72: 288]]
+        if 1 in flag:
+            return False
+        else:
+            return True
     else:
-        return True
+        flag= [1 if i > 2.5
+         else 0 for i in scan_data.ranges[165:195]]
+        # if scan_data.ranges[180] < 3.0:
+        if 1 in flag:
+            return True
+        else:
+            return False
 
 def left_wall_detect(scan_data):
     scan_range= scan_data.ranges
@@ -126,13 +142,9 @@ def bot_movement(scan_data, odom_data):
             else:
                 pass
         elif len(wall_detection['front']) == 0 and (len(wall_detection['left']) < 70) :
-            # if (len(wall_detection['left']) < 70):
-            #     print('Should turn')
-            # else:
-            #     print('No need to turn')
             print('Turn a bit')
             mov_msg.linear.x= 1 #0.5
-            mov_msg.angular.z= 0.5 #0.5
+            mov_msg.angular.z= 0.75 #0.5
             first_contact= True
             cmd_pub.publish(mov_msg)
         else:
@@ -140,26 +152,30 @@ def bot_movement(scan_data, odom_data):
             line_flag= bot_pos[1] - (goal_line[0] * bot_pos[0]) - goal_line[1]
             if (-0.05 <= line_flag <= 0.05) == False and first_contact:
                 print('Line not reached')
-                # first_contact= False
-                mov_msg.linear.x= 0.5
+                mov_msg.linear.x= 0.75
                 cmd_pub.publish(mov_msg)
             else:
                 print('Line reached')
                 bot_status= 'GOALSEEK'
 
 def sync_callback(scan_msg, odom_msg):
-    global first_contact
+    global first_contact, goal_distance, bot_status
 
     print('-------------------- '+bot_status+' --------------------')
-    print(first_contact)
 
     odom_msg= odom_msg.pose.pose
     bot_pos= (odom_msg.position.x, odom_msg.position.y, odom_msg.position.z)
 
-    if bot_pos == bot_goal:
-        print('Bot in goal')
+    goal_distance= cal_dist(
+        pt_1= bot_pos, 
+        pt_2= bot_goal
+    )
+
+    print('Distance to goal '+str(goal_distance))
+
+    if goal_distance < 0.2:
+        print('GOAL')
     else:
-        print('Bot not in goal')
         bot_movement(
             scan_data= scan_msg, 
             odom_data= odom_msg
