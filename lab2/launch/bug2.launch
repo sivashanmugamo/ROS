@@ -7,5 +7,4 @@
 
     <!-- Launches controller_2.py script -->
     <node name= "test_2" pkg= "lab2" type= "controller_2.py" output= "screen" />
-    <!-- <node name= "test_2" pkg= "lab2" type= "control_2.py" output= "screen" /> -->
 </launch>
