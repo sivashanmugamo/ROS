@@ -171,7 +171,6 @@ def bot_movement(scan_data, odom_data):
             bot_status= 'WALLFOLLOW'
     elif bot_status == 'WALLFOLLOW':
         wall_detection= left_wall_detect(scan_data= scan_data)
-        # print(wall_detection)
         if len(wall_detection['front']) != 0:
             if first_contact == True:
                 print('Obstacle in front')
@@ -231,7 +230,7 @@ def sync_callback(scan_msg, odom_msg):
 
 if __name__ == '__main__':
     # Initiating a node
-    rospy.init_node('test_node_2')
+    rospy.init_node('bug2_node')
 
     # Initiating subscribers for topics /base_scan & /odom
     scan_sub= message_filters.Subscriber('/base_scan', LaserScan)

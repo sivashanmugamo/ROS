@@ -3,5 +3,8 @@
     <node name= "stage" pkg= "stage_ros" type= "stageros" args= "$(find lab2)/world/playground.world" />
 
     <!-- Launches controller_1.py script -->
-    <node name= "test" pkg= "lab2" type= "controller_1.py" output= "screen" />
+    <node name= "ransac" pkg= "lab2" type= "controller_1.py" output= "screen" />
+
+    <!-- Launches rviz -->
+    <node name= "rviz" pkg= "rviz" type= "rviz" args="-d $(find lab2)/rviz/default.rviz" />
 </launch>

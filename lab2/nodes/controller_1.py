@@ -196,7 +196,7 @@ def subscriber_callback(msg):
 
 if __name__ == '__main__':
     # Initiating a node
-    rospy.init_node('test_node')
+    rospy.init_node('ransac_node')
 
     # Initiating a subscriber
     sub = rospy.Subscriber(
