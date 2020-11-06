@@ -42,31 +42,29 @@ def extract_image_data(files):
 
     return(img_data)
 
-# def image_processing(images):
-#     for each_image in images:
-#         Image.fromarray(each_image[:342][:]).show()
-#         # break
-
-# if __name__ == '__main__':
-#     image_paths= extract_file_location(location= images_location)
-#     image_data= extract_image_data(files= image_paths)
-#     image_processing(images= image_data)
-
 def drop_border(image):
+    '''
+    Removes the border around the given image
+    Source: https://www.stackoverflow.com/questions/19271692/removing-borders-from0an-image-in-python
+
+    Input:
+        image - PIL Jpeg image file
+    Output:
+        cropped image - PIL Jpeg image file
+    '''
     tst= Image.new(image.mode, image.size, image.getpixel((0, 0)))
     dif= ImageChops.difference(image, tst)
     dif= ImageChops.add(dif, dif, 2.0, -100)
     box= dif.getbbox()
     if box:
-        # image.crop(box).show()
-        print(image.crop(box).size)
-    # dif.show()
+        return image.crop(box)
+    else:
+        print('Could not crop')
 
 if __name__ == '__main__':
     image_paths= extract_file_location(location= images_location)
     image_data= extract_image_data(files= image_paths)
-    
+
+    borderless_images= dict()
     for img, data in image_data.items():
-        print(data['pil'].size)
-        drop_border(data['pil'])
-        break
+        image_data[img]['borderless']= data['pil']
