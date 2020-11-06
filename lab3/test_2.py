@@ -19,9 +19,11 @@ r= np.array(a.crop((0, 2*h/3, w, h)))
 (rw, rh)= r.shape
 
 # print(b.shape, g.shape, r.shape)
+val= list()
 for bx in range(0, bw-10):
     for by in range(0, bh-10):
-        b[bx:bx+10, by:by+10]
         for gx in range(0, gw-10):
             for gy in range(0, gh-10):
-                g[gx:gx+10, gy:gy+10]
+                val.append(np.sum(np.power(np.subtract(g[gx:gx+10, gy:gy+10], b[bx:bx+10, by:by+10]), 2)))
+
+print(len(val))
