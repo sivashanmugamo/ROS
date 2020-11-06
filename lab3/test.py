@@ -23,5 +23,10 @@ for root, directory, files in os.walk('./images/'):
         r= r.split()[0]
 
         tst= Image.merge('RGB', (r, g, b))
-        tst.save('test'+str(i)+'.png')
+
+        if os.path.isdir('part 1/'):
+            tst.save('part 1/test'+str(i)+'.png')
+        else:
+            os.mkdir('part 1')
+            tst.save('part 1/test'+str(i)+'.png')
         i+=1
