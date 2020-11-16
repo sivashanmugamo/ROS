@@ -1,3 +1,5 @@
+The conjoined images are in the samples folder.
+
 Please run the following command in terminal window
 >>> python3 "main.py" "./samples"
 

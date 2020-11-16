@@ -160,8 +160,8 @@ def ssd(img_data, mode):
                         save_bj= j
                         save_img_b= np.roll(img_b, (i, j), axis= (0, 1))
 
-            print('Green displacement :'+str((save_gi, save_gj)))
-            print('Blue displacement :'+str((save_bi, save_bj)))
+            print('Best R-G displacement based on SDD :'+str((save_gi, save_gj)))
+            print('Best R-B displacement based on SDD :'+str((save_bi, save_bj)))
 
             img_r= Image.fromarray(img_r)
             img_g= Image.fromarray(save_img_g)
@@ -178,6 +178,7 @@ def ncc(img_data, mode):
     and saves the image as 'image*-ssd.png'
     Ref: 
         1. NCC wiki - https://en.wikipedia.org/wiki/Cross-correlation#Normalized_cross-correlation
+            cos -> (a.b)/(|a||b|)- Provides a similarity index
         2. Image windowing - https://medium.com/outco/how-to-solve-sliding-window-problems-28d67601a66
 
     Input:
@@ -243,8 +244,8 @@ def ncc(img_data, mode):
                         save_bj= j
                         save_img_b= np.roll(img_b, (i, j), axis= (0, 1))
 
-            print('Green displacement :'+str((save_gi, save_gj)))
-            print('Blue displacement :'+str((save_bi, save_bj)))
+            print('Best R-G displacement based on NCC :'+str((save_gi, save_gj)))
+            print('Best R-B displacement based on NCC :'+str((save_bi, save_bj)))
 
             img_r= Image.fromarray(img_r)
             img_g= Image.fromarray(save_img_g)
