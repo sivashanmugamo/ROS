@@ -1,0 +1,25 @@
+<launch>
+    <!-- Launches playground.world file -->
+    <node name="stage" pkg="stage_ros" type="stageros" args="$(find lab1)/world/playground_2.world">
+    </node>
+
+    <!-- Launches evader_control.py file -->
+    <node pkg= "lab1" name= "evader" type= "evader_control.py" output= "screen">
+        <param name= "robot" type= "string" value= "robot_0" />
+    </node>
+
+    <!-- Launches broadcaster.py file for evader -->
+    <node pkg= "lab1" name= "evader_broadcaster" type= "broadcaster.py" respawn= "false" output= "screen">
+        <param name= "robot" type= "string" value= "robot_0" />
+    </node>
+
+    <!-- Launches broadcaster.py file for pursuer -->
+    <node pkg= "lab1" name= "pursuer_broadcaster" type= "broadcaster.py" respawn= "false" output= "screen">
+        <param name= "robot" type= "string" value= "robot_1" />
+    </node>
+
+    <!-- Launches pursuer_control.py file -->
+    <node pkg= "lab1" name= "pursuer" type= "pursuer_control.py">
+    </node>
+</launch>
+ 

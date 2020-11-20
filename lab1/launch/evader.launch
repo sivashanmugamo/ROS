@@ -1,0 +1,10 @@
+<launch>
+    <!-- Launches playground.world file -->
+    <node name="stage" pkg="stage_ros" type="stageros" args="$(find lab1)/world/playground.world">
+    </node>
+    
+    <!-- Launches evader_control.py file -->
+    <node name= "evader" pkg= "lab1" type= "evader_control.py" output= "screen">
+        <param name= "robot" type= "string" value= "" />
+    </node>
+</launch>
