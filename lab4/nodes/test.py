@@ -1,11 +1,3 @@
-# import itertools
-# a= list(range(10))
-# print(list(itertools.combinations(a, 2)))
-
-# import string
-
-# print(string.ascii_lowercase)
-
 import numpy as np
 
 world_grid= open('/home/shiva/catkin_ws/src/lab4/world/map.txt', 'r').read()
@@ -21,7 +13,6 @@ for i in range(-9, 10):
         temp_1.append(temp_2)
 
 temp= np.array(temp_1).reshape((20, 18, 2))
-
 
 for i in range(0, 20):
     tst= dict()
