@@ -7,5 +7,5 @@
     <!-- <node name= "rviz" pkg= "rviz" type= "rviz" args="-d $(find lab4)/rviz/default.rviz" /> -->
 
     <!-- Launches main.py script -->
-    <!-- <node name= "Test" pkg= "lab4" type="main.py" output= "screen" /> -->
+    <node name= "Test" pkg= "lab4" type="main.py" output= "screen" />
 </launch>

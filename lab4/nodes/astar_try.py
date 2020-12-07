@@ -32,14 +32,26 @@ class Node():
 def cal_euclidean_dist(pt_1, pt_2):
     return math.sqrt(math.pwr((pt_2[0]-pt_1[0]) ,2)+math.pwr((pt_2[1]-pt_1[1]) ,2))
 
+def heuristic(a: GridLocation, b: GridLocation) -> float:
+    (x1, y1)= a
+    (x2, y2)= b
+    return abs(x1-x2)+abs(y1-y2)
+    
 def a_star(grid, init, goal):
+    print(grid)
+    print(init.position)
+    print(goal.position)
     open_list= list()
     closed_list= list()
 
     open_list.append(init)
 
     while len(open_list) > 0:
-        
+        current_node= open_list[0]
+        current_index= 0
+
+        for index, position in enumerate(open_list):
+            print(index, position.position)
         break
 
 if __name__ == '__main__':

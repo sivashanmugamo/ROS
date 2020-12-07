@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 world_grid= open('/home/shiva/catkin_ws/src/lab4/world/map.txt', 'r').read()
 world_grid= np.array([int(i) for i in world_grid if i in ['0', '1']]).reshape(20, 18)
-world_grid= list(world_grid)
-# print(world_grid)
+# world_grid= list(world_grid)
+
 class Node():
     """A node class for A* Pathfinding"""
 
@@ -18,9 +18,8 @@ class Node():
         self.h = 0
         self.f = 0
 
-    # def __eq__(self, other):
-    #     return self.position == other.position
-
+    def __eq__(self, other):
+        return self.position == other.position
 def cal_euclidean_dist(pt1, pt2):
     return math.sqrt(math.pow(pt2[0]-pt1[0], 2) + math.pow(pt2[1]-pt1[1], 2))
 
@@ -40,11 +39,8 @@ def astar(maze, start, end):
     # Add the start node
     open_list.append(start_node)
 
-    z= 0
     # Loop until you find the end
     while len(open_list) > 0:
-        z+=1
-        print('----------'+str(z)+'-----------')
 
         # Get the current node
         current_node = open_list[0]
@@ -60,7 +56,6 @@ def astar(maze, start, end):
 
         # Found the goal
         if current_node == end_node:
-            print('Goal found')
             path = []
             current = current_node
             while current is not None:
@@ -70,35 +65,27 @@ def astar(maze, start, end):
 
         # Generate children
         children = []
-        # for new_position in [(0,1),(0,-1),(1,0),(-1,0)]:
+        # for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
         for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
 
             # Get node position
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
 
             # Make sure within range
-            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
+            if node_position[0] > (maze.shape[0] - 1) or node_position[0] < 0 or node_position[1] > (maze.shape[1] -1) or node_position[1] < 0:
                 continue
 
             # Make sure walkable terrain
             if maze[node_position[0]][node_position[1]] != 0:
                 continue
 
-            # print(cal_euclidean_dist(current_node.position, node_position))
-            # if (cal_euclidean_dist(current_node.position, node_position)-1.4<=0.015 and cal_euclidean_dist(current_node.position, node_position)-1.4 >0):
-            #     if (maze[node_position[0]][node_position[1]-1] == 1) and (maze[node_position[0]+1][node_position[1]] == 1):
-            #         print('Diagonal node')
-            #         continue
-
+            # if (abs(cal_euclidean_dist(current_node.position, node_position)-1.414)<0.01 and maze[node_position[1]][node_position[0]-1] == 1) and (maze[node_position[1]-1][node_position[0]] == 1):
+            #     continue
             # Create new node
             new_node = Node(current_node, node_position)
 
             # Append
             children.append(new_node)
-            # print([i.position for i in children])
-
-            # time.sleep(0.5)
-        # print([(i.position, i.f) for i in children])
 
         # Loop through children
         for child in children:
@@ -120,10 +107,6 @@ def astar(maze, start, end):
 
             # Add the child to the open list
             open_list.append(child)
-        # print([(k.position, k.f) for k in open_list])
-
-        # if z==6:
-        #     break
 
 
 def main():
@@ -140,18 +123,18 @@ def main():
     #         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
     maze= world_grid
-
+    print(maze)
     start = (11, 1)
     end = (1, 13)
 
-    path = astar(maze, start, end)
+    path = astar(maze[::-1], start, end)
     print(path)
 
     for i in path:
         maze[i[0]][i[1]]= 2
-    
     plt.imshow(maze)
     plt.show()
+
 
 if __name__ == '__main__':
     main()
