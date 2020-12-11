@@ -3,27 +3,37 @@
 import sys
 import math
 import rospy
-import string
-import itertools
 import numpy as np
 import message_filters
+import tf.transformations as tr
 
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
+# Getting parameters
+bot_goal_x= int(rospy.get_param('goal_x'))
+bot_goal_y= int(rospy.get_param('goal_y'))
+
 # Setting global variables
-global bot_pose
-
 bot_init= (-8.0, -2.0, 0.0)
-bot_goal= (4.5, 9.0, 0.0)
+bot_goal= (bot_goal_x, bot_goal_y, 0.0)
 
-grid_path= '/home/shiva/catkin_ws/src/lab4/world/map.txt'
+print('The bot\'s initial position is '+str(bot_init)+' and the goal position is '+str(bot_goal))
+
+grid_file_path= '/home/shiva/catkin_ws/src/lab4/world/map.txt'
 map_dimensions= (18.0, 19.6, 0.5) # From playground.world file - (x, y, *)
 
-path= list()
 grid= list()
+grid_path= list()
+world_path= list()
 grid_world_coor= dict()
+
+bot_ori= tuple()
+bot_pose= tuple()
+
+interim_init= tuple()
+interim_goal= tuple()
 
 # Initiating a publisher
 cmd_pub= rospy.Publisher(
@@ -34,6 +44,7 @@ cmd_pub= rospy.Publisher(
 
 class Node():
     '''
+    To represent the properties of each node
     '''
     def __init__(self, parent= None, position= None):
         self.parent= parent
@@ -69,7 +80,6 @@ def read_map(path, dim):
                 grid_world_coor[(grid_x, grid_y)]= dict()
                 grid_world_coor[(grid_x, grid_y)]['world_coor']= (x_min, y_max)
                 grid_world_coor[(grid_x, grid_y)]['walkable']= grid[grid_x][grid_y]
-                # print((grid_x, grid_y), (x_min, y_max))
                 y_max -= 1
             x_min += 1
 
@@ -91,7 +101,7 @@ def cal_euclidean_dist(pt1, pt2):
         (x1, y1)= pt1
         (x2, y2)= pt2
 
-        return int(math.sqrt(math.pow((x2-x1), 2) + math.pow((y2-y1), 2)))
+        return math.sqrt(math.pow((x2-x1), 2) + math.pow((y2-y1), 2))
     else:
         raise TypeError
 
@@ -125,7 +135,8 @@ def a_star(grid, init, goal):
     Output:
         List of tuples
     '''
-    global path
+
+    global grid_path, map_dimensions
 
     init_node= Node(parent= None, position= init)
     init_node.g_cost= init_node.h_cost= init_node.f_cost= 0
@@ -137,60 +148,174 @@ def a_star(grid, init, goal):
 
     open_list.append(init_node)
 
-    # while len(open_list) > 0:
-    #     curr_node= open_list[0]
-    #     curr_index= 0
+    search_iter= 0
+    while len(open_list) > 0:
+        search_iter+=1
 
-    #     # print(curr_node, curr_index)
-    #     for index, node in enumerate(open_list):
-    #         if node.f_cost < curr_node.f_cost:
-    #             curr_node= node
-    #             curr_index= index
-        
-    #     # print(curr_node, curr_index)
-        
-    #     open_list.pop(curr_index)
-    #     eval_list.append(curr_node)
+        current_node= open_list[0]
+        current_index= 0
 
-    # #     if curr_node == goal_node:
-    # #         print('Goal has been reached | Generating optimum path for movement')
-    # #         path= list()
-    # #         current= curr_node
-    # #         while current is not None:
-    # #             path.append(current.position)
-    # #             current= current.parent
-    # #         return path[::-1]
-    #     break
+        for index, value in enumerate(open_list):
+            if value.f_cost < current_node.f_cost:
+                current_node= value
+                current_index= index
+            
+        open_list.pop(current_index)
+        eval_list.append(current_node)
 
-    path= [(11, 1), (11, 2), (11, 3), (11, 4), (12, 5), (13, 6), (14, 7), (14, 8), (13, 9), (12, 10), (11, 11), (10, 12), (9, 13), (8, 13), (7, 13), (6, 13), (5, 13), (4, 13), (3, 13), (2, 13), (1, 13)]
+        if current_node == goal_node:
+            grid_path= list()
+            current= current_node
+            while current is not None:
+                grid_path.append(current.position)
+                current= current.parent
+            print('Path is found - '+str(grid_path[::-1]))
+            break
+
+        child_nodes= list()
+        for child_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            pos= (current_node.position[0] + child_position[0], current_node.position[1] + child_position[1])
+
+            # if pos[0]>(len())
+
+            if grid[pos[0]][pos[1]] != 0:
+                continue
+
+            child_nodes.append(Node(parent= current_node, position= pos))
+
+        for each_child in child_nodes:
+            for each_eval_child in eval_list:
+                if each_eval_child == each_child:
+                    continue
+
+            each_child.g_cost= current_node.g_cost + 1
+            each_child.h_cost= math.sqrt(math.pow((each_child.position[0] - goal_node.position[0]), 2) + math.pow((each_child.position[1] - goal_node.position[1])*5, 2))
+            each_child.f_cost= each_child.g_cost + each_child.h_cost
+
+            for each_open_node in open_list:
+                if (each_child == each_open_node) and (each_child.g_cost > each_open_node.g_cost):
+                    continue
+
+            open_list.append(each_child)
+
+        if search_iter > 1000:
+            print('Path not found')
+            break
+
+def bot_orient(init, goal):
+    '''
+    Rotates the bot by the degree of the difference between the goal & initial angle
+
+    Input:
+        init: Float - Angle in radians
+        goal: Float - Angle in radians
+    '''
+    
+    rot_msg= Twist()
+
+    if (init - goal) > 0:
+        rot_msg.angular.z= (-1)*(init - goal)
+        cmd_pub.publish(rot_msg)
+    else:
+        rot_msg.angular.z= abs(init - goal)
+        cmd_pub.publish(rot_msg)
+
+def bot_motion(init, goal):
+    '''
+    Moves the bot based to the coorodinate
+
+    Input:
+        init: tuple of floats - Intermediate initial coordinate
+        goal: tuple of floats - Inttermediate goal coordinate
+    '''
+
+    global bot_pose, bot_ori, interim_init, interim_goal
+
+    if isinstance(init, tuple) and isinstance(goal, tuple):
+        mov_msg= Twist()
+
+        goal_angle= cal_goal_angle(
+            pt1= init, 
+            pt2= goal
+        )
+
+        (roll, pitch, yaw)= tr.euler_from_quaternion(bot_ori)
+
+        if (cal_euclidean_dist(bot_pose[:2], interim_goal) > 0.06):
+            if (((yaw + 0.003) > goal_angle) and (goal_angle > (yaw - 0.003))) == False:
+                bot_orient(
+                    init= yaw, 
+                    goal= goal_angle
+                )
+            else:
+                mov_msg.linear.x= 0.5
+                cmd_pub.publish(mov_msg)
+        else:
+            # Intermediate goal change
+            print('Reached '+str(interim_goal))
+            mov_msg.linear.x= 0.0
+            cmd_pub.publish(mov_msg)
+
+            if interim_goal != bot_goal[:2]:
+                interim_init= interim_goal
+                interim_goal= world_path[world_path.index(interim_goal)+1]
+            else:
+                print('GOAL REACHED')
+
+    else:
+        raise TypeError
 
 def sync_callback(scan_msg, odom_msg):
     '''
+    Callback function for the subscribers
+
+    Input:
+        scan_msg: Laserscan message
+        odom_msg: Odometry message
     '''
-    global path, bot_goal
+
+    global bot_pose, bot_ori, interim_init, interim_goal
 
     odom_msg= odom_msg.pose.pose
+
     bot_pose= (odom_msg.position.x, odom_msg.position.y, odom_msg.position.z)
-    print(path)
+    bot_ori= (odom_msg.orientation.x, odom_msg.orientation.y, odom_msg.orientation.z, odom_msg.orientation.w)
+
+    if len(interim_init) == 0 and len(interim_goal) == 0:
+        interim_init= world_path[0]
+        interim_goal= world_path[1]
+
+    bot_motion(
+        init= interim_init, 
+        goal= interim_goal
+    )
 
 if __name__ == '__main__':
     # Initializing a node
     rospy.init_node('Robot')
 
     # Reading the map.txt file to associate the grid coordinates to world coordinates
-    read_map(path= grid_path, dim= map_dimensions)
-    # print(grid_world_coor[(1, 11)])
+    read_map(path= grid_file_path, dim= map_dimensions)
 
     # Initiating the A* algorithm
-    a_star(grid= grid, init= (11, 1), goal= (1, 13))
+    a_star(grid= grid, init= (11, 1), goal= (0, 13))
 
-    # Initiating subscribers for topics /base_scan & /odom
-    scan_sub= message_filters.Subscriber('/base_scan', LaserScan)
-    odom_sub= message_filters.Subscriber('/odom', Odometry)
+    if len(grid_path)>0:
+        # Printing the calculated path
+        for each in grid_path:
+            grid[each[0]][each[1]] = '_'
+        print(np.array(grid))
 
-    # Initiating a synchronizer to get the messages in sync
-    sub_sync= message_filters.ApproximateTimeSynchronizer([scan_sub, odom_sub], 10, 0.1, True)
-    sub_sync.registerCallback(sync_callback)
+        # Converting grid coordinates into world coordinates
+        world_path= [grid_world_coor[(y, x)]['world_coor'] if (grid_world_coor[(y, x)]['world_coor'] != (-1, -4)) else (-0.5,-4) for (x, y) in grid_path[::-1]]
 
-    # Runs the session infinitely
-    rospy.spin()
+        # Initiating subscribers for topics /base_scan & /odom
+        scan_sub= message_filters.Subscriber('/base_scan', LaserScan)
+        odom_sub= message_filters.Subscriber('/odom', Odometry)
+
+        # Initiating a synchronizer to get the messages in sync
+        sub_sync= message_filters.ApproximateTimeSynchronizer([scan_sub, odom_sub], 10, 0.1, True)
+        sub_sync.registerCallback(sync_callback)
+
+        # Runs the session infinitely
+        rospy.spin()

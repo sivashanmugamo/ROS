@@ -2,10 +2,10 @@
     <!-- Launches playground.world file -->
     <node name= "stage" pkg= "stage_ros" type= "stageros" args= "$(find lab4)/world/playground.world" />
 
-    <!-- Launches rviz -->
-    <!-- <node name= "rviz" pkg= "rviz" type= "rviz" /> -->
-    <!-- <node name= "rviz" pkg= "rviz" type= "rviz" args="-d $(find lab4)/rviz/default.rviz" /> -->
-
     <!-- Launches main.py script -->
     <node name= "Test" pkg= "lab4" type="main.py" output= "screen" />
+
+    <!-- Setting parameters for ROS -->
+    <param name= "goal_x" value= "4.5" type= "double" />
+    <param name= "goal_y" value= "9.0" type= "double" />
 </launch>
