@@ -21,6 +21,7 @@ bot_goal= (bot_goal_x, bot_goal_y, 0.0)
 
 print('The bot\'s initial position is '+str(bot_init)+' and the goal position is '+str(bot_goal))
 
+# Path of the map.txt file
 grid_file_path= '/home/shiva/catkin_ws/src/lab4/world/map.txt'
 map_dimensions= (18.0, 19.6, 0.5) # From playground.world file - (x, y, *)
 
