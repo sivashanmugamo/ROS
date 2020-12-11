@@ -176,8 +176,8 @@ def a_star(grid, init, goal):
         for child_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
             pos= (current_node.position[0] + child_position[0], current_node.position[1] + child_position[1])
 
-            # if pos[0]>(len())
-
+            if (pos[0] > map_dimensions[1] - 1) or (pos[0] < 0) or (pos[1] > map_dimensions[0] - 1) or (pos[1] < 0):
+                continue
             if grid[pos[0]][pos[1]] != 0:
                 continue
 
@@ -297,8 +297,15 @@ if __name__ == '__main__':
     # Reading the map.txt file to associate the grid coordinates to world coordinates
     read_map(path= grid_file_path, dim= map_dimensions)
 
+    # Finding the grid coordinates corresponding to world coordinate
+    for key, value in grid_world_coor.items():
+        if value['world_coor'] == bot_goal[:2]:
+            grid_goal= key
+        if value['world_coor'] == bot_init[:2]:
+            grid_init= key
+
     # Initiating the A* algorithm
-    a_star(grid= grid, init= (11, 1), goal= (0, 13))
+    a_star(grid= grid, init= grid_init[::-1], goal= grid_goal[::-1])
 
     if len(grid_path)>0:
         # Printing the calculated path
