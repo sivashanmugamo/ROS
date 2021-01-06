@@ -129,6 +129,12 @@ def a_star(grid, init, goal):
     '''
     Searches for the optimal path
 
+    Ref:
+        1. https://www.youtube.com/watch?v=ySN5Wnu88nE
+        2. https://towardsdatascience.com/a-star-a-search-algorithm-eb495fb156bb
+        3. https://brilliant.org/wiki/a-star-search/
+        4. https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
+
     Input:
         grid: List of lists - Elements represent walkable/unwalkable area (0/1)
         init: Tuple of floats - 
